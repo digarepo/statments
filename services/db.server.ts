@@ -1,4 +1,6 @@
 // services/db.server.ts
+import dotenv from "dotenv";
+dotenv.config();
 import mariadb from "mariadb";
 
 const pool = mariadb.createPool({

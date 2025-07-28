@@ -6,6 +6,7 @@
 } from "@remix-run/node";
 import { useFetcher, useLoaderData } from "@remix-run/react";
 import { query } from "services/db.server";
+import { format } from "date-fns";
 
 export const meta: MetaFunction = () => {
   return [
@@ -34,16 +35,17 @@ export const action: ActionFunction = async ({ request }) => {
   const amount = Number(formData.get("amount"));
   const date =String( formData.get("date"));
   const old_id = String(formData.get("old_id"));
-
+  const depositDate = new Date(date);
+  const formattedDate = depositDate.toISOString().slice(0, 19).replace("T", " ");
   if (intent === "create") {
     await query(
       "INSERT INTO deposits (dp_id, amount, deposit_date) VALUES (?, ?, ?)",
-      [id, amount, date]
+      [id, amount, formattedDate]
     );
   } else if (intent === "update") {
     await query(
       "UPDATE deposits SET dp_id = ?, amount = ?, deposit_date = ? WHERE dp_id = ?",
-      [id, amount, date, old_id]
+      [id, amount, formattedDate, old_id]
     );
   } else if (intent === "delete") {
     await query("DELETE FROM deposits WHERE dp_id = ?", [id]);
@@ -114,7 +116,7 @@ export default function DepositsPage() {
               <input
                 name="date"
                 type="date"
-                defaultValue={d.deposit_date}
+                defaultValue={d.deposit_date ? format(new Date(d.deposit_date), "yyyy-MM-dd") : ""}
                 className="p-2 border"
                 required
               /> 

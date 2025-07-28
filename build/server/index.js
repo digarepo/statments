@@ -4,6 +4,7 @@ import { createReadableStreamFromReadable, json } from "@remix-run/node";
 import { RemixServer, Outlet, Meta, Links, ScrollRestoration, Scripts, useLoaderData, useFetcher } from "@remix-run/react";
 import { isbot } from "isbot";
 import { renderToPipeableStream } from "react-dom/server";
+import dotenv from "dotenv";
 import mariadb from "mariadb";
 const ABORT_DELAY = 5e3;
 function handleRequest(request, responseStatusCode, responseHeaders, remixContext, loadContext) {
@@ -139,6 +140,7 @@ const route0 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProper
   default: App,
   links
 }, Symbol.toStringTag, { value: "Module" }));
+dotenv.config();
 const pool = mariadb.createPool({
   host: process.env.DB_HOST || "127.0.0.1",
   user: process.env.DB_USER || "root",
@@ -187,15 +189,17 @@ const action = async ({ request }) => {
   const amount = Number(formData.get("amount"));
   const date = String(formData.get("date"));
   const old_id = String(formData.get("old_id"));
+  const depositDate = new Date(date);
+  const formattedDate = depositDate.toISOString().slice(0, 19).replace("T", " ");
   if (intent === "create") {
     await query(
       "INSERT INTO deposits (dp_id, amount, deposit_date) VALUES (?, ?, ?)",
-      [id, amount, date]
+      [id, amount, formattedDate]
     );
   } else if (intent === "update") {
     await query(
       "UPDATE deposits SET dp_id = ?, amount = ?, deposit_date = ? WHERE dp_id = ?",
-      [id, amount, date, old_id]
+      [id, amount, formattedDate, old_id]
     );
   } else if (intent === "delete") {
     await query("DELETE FROM deposits WHERE dp_id = ?", [id]);
@@ -274,7 +278,7 @@ function DepositsPage() {
         {
           name: "date",
           type: "date",
-          defaultValue: d.deposit_date,
+          defaultValue: d.deposit_date ? d.deposit_date.split("T")[0] || d.deposit_date.split(" ")[0] : "",
           className: "p-2 border",
           required: true
         }
@@ -312,7 +316,7 @@ const route1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProper
   loader,
   meta
 }, Symbol.toStringTag, { value: "Module" }));
-const serverManifest = { "entry": { "module": "/assets/entry.client-CtHEAkve.js", "imports": ["/assets/components-DuEQsw7T.js"], "css": [] }, "routes": { "root": { "id": "root", "parentId": void 0, "path": "", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/root-DoNHjzvZ.js", "imports": ["/assets/components-DuEQsw7T.js"], "css": ["/assets/root-Cofw7XHV.css"] }, "routes/_index": { "id": "routes/_index", "parentId": "root", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/_index-CQ21TgqM.js", "imports": ["/assets/components-DuEQsw7T.js"], "css": [] } }, "url": "/assets/manifest-6bd9526d.js", "version": "6bd9526d" };
+const serverManifest = { "entry": { "module": "/assets/entry.client-CtHEAkve.js", "imports": ["/assets/components-DuEQsw7T.js"], "css": [] }, "routes": { "root": { "id": "root", "parentId": void 0, "path": "", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/root-DoNHjzvZ.js", "imports": ["/assets/components-DuEQsw7T.js"], "css": ["/assets/root-Cofw7XHV.css"] }, "routes/_index": { "id": "routes/_index", "parentId": "root", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/_index-B8LiUUb9.js", "imports": ["/assets/components-DuEQsw7T.js"], "css": [] } }, "url": "/assets/manifest-d9e19647.js", "version": "d9e19647" };
 const mode = "production";
 const assetsBuildDirectory = "build\\client";
 const basename = "/";
