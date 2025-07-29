@@ -6,6 +6,7 @@ import { isbot } from "isbot";
 import { renderToPipeableStream } from "react-dom/server";
 import dotenv from "dotenv";
 import mariadb from "mariadb";
+import { format } from "date-fns";
 const ABORT_DELAY = 5e3;
 function handleRequest(request, responseStatusCode, responseHeaders, remixContext, loadContext) {
   return isbot(request.headers.get("user-agent") || "") ? handleBotRequest(
@@ -188,18 +189,30 @@ const action = async ({ request }) => {
   const id = String(formData.get("id"));
   const amount = Number(formData.get("amount"));
   const date = String(formData.get("date"));
+  const ownerName = String(formData.get("owner_name"));
+  const depositorName = String(formData.get("depositor_name"));
+  const reconciliation = String(formData.get("reconciliation"));
+  const refNumber = String(formData.get("ref_number"));
+  const depositNumber = String(formData.get("deposit_number"));
+  const bankName = String(formData.get("bank_name"));
+  const accountType = String(formData.get("account_type"));
+  const comment = String(formData.get("comment"));
   const old_id = String(formData.get("old_id"));
   const depositDate = new Date(date);
   const formattedDate = depositDate.toISOString().slice(0, 19).replace("T", " ");
   if (intent === "create") {
     await query(
-      "INSERT INTO deposits (dp_id, amount, deposit_date) VALUES (?, ?, ?)",
-      [id, amount, formattedDate]
+      `INSERT INTO deposits 
+      (dp_id, amount, deposit_date, owner_name, depositor_name, reconciliation, ref_number, deposit_number, bank_name, account_type, comment) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, amount, formattedDate, ownerName, depositorName, reconciliation, refNumber, depositNumber, bankName, accountType, comment]
     );
   } else if (intent === "update") {
     await query(
-      "UPDATE deposits SET dp_id = ?, amount = ?, deposit_date = ? WHERE dp_id = ?",
-      [id, amount, formattedDate, old_id]
+      `UPDATE deposits SET 
+      dp_id = ?, amount = ?, deposit_date = ?, owner_name = ?, depositor_name = ?, reconciliation = ?, ref_number = ?, deposit_number = ?, bank_name = ?, account_type = ?, comment = ?
+      WHERE dp_id = ?`,
+      [id, amount, formattedDate, ownerName, depositorName, reconciliation, refNumber, depositNumber, bankName, accountType, comment, old_id]
     );
   } else if (intent === "delete") {
     await query("DELETE FROM deposits WHERE dp_id = ?", [id]);
@@ -209,102 +222,47 @@ const action = async ({ request }) => {
 function DepositsPage() {
   const deposits = useLoaderData();
   const fetcher = useFetcher();
-  return /* @__PURE__ */ jsxs("div", { className: "max-w-md mx-auto p-4", children: [
-    /* @__PURE__ */ jsxs(fetcher.Form, { method: "post", className: "mb-8 p-4 border rounded", children: [
-      /* @__PURE__ */ jsx("h2", { className: "text-lg font-bold mb-2", children: "Add Deposit" }),
-      /* @__PURE__ */ jsx(
-        "input",
-        {
-          name: "id",
-          placeholder: "Deposit ID",
-          className: "w-full p-2 border mb-2",
-          required: true
-        }
-      ),
-      /* @__PURE__ */ jsx(
-        "input",
-        {
-          name: "amount",
-          type: "number",
-          placeholder: "Amount",
-          step: "0.01",
-          className: "w-full p-2 border mb-2",
-          required: true
-        }
-      ),
-      /* @__PURE__ */ jsx(
-        "input",
-        {
-          name: "date",
-          type: "date",
-          className: "w-full p-2 border mb-2",
-          required: true
-        }
-      ),
+  return /* @__PURE__ */ jsxs("div", { className: "max-w-4xl mx-auto p-4", children: [
+    /* @__PURE__ */ jsxs(fetcher.Form, { method: "post", className: "mb-8 p-4 border rounded grid grid-cols-2 gap-4", children: [
+      /* @__PURE__ */ jsx("h2", { className: "col-span-2 text-lg font-bold mb-2", children: "Add Deposit" }),
+      /* @__PURE__ */ jsx("input", { name: "id", placeholder: "Deposit ID", className: "p-2 border", required: true }),
+      /* @__PURE__ */ jsx("input", { name: "amount", type: "number", placeholder: "Amount", step: "0.01", className: "p-2 border", required: true }),
+      /* @__PURE__ */ jsx("input", { name: "date", type: "date", className: "p-2 border", required: true }),
+      /* @__PURE__ */ jsx("input", { name: "owner_name", placeholder: "Owner Name", className: "p-2 border" }),
+      /* @__PURE__ */ jsx("input", { name: "depositor_name", placeholder: "Depositor Name", className: "p-2 border" }),
+      /* @__PURE__ */ jsx("input", { name: "reconciliation", placeholder: "Reconciliation", className: "p-2 border" }),
+      /* @__PURE__ */ jsx("input", { name: "ref_number", placeholder: "Reference Number", className: "p-2 border" }),
+      /* @__PURE__ */ jsx("input", { name: "deposit_number", placeholder: "Deposit Number", className: "p-2 border" }),
+      /* @__PURE__ */ jsx("input", { name: "bank_name", placeholder: "Bank Name", className: "p-2 border" }),
+      /* @__PURE__ */ jsx("input", { name: "account_type", placeholder: "Account Type", className: "p-2 border" }),
+      /* @__PURE__ */ jsx("textarea", { name: "comment", placeholder: "Comment", className: "col-span-2 p-2 border" }),
       /* @__PURE__ */ jsx(
         "button",
         {
           type: "submit",
           name: "intent",
           value: "create",
-          className: "bg-blue-500 text-white p-2 rounded",
+          className: "col-span-2 bg-blue-500 text-white p-2 rounded",
           children: "Create"
         }
       )
     ] }),
-    /* @__PURE__ */ jsx("div", { className: "space-y-4", children: deposits.map((d) => /* @__PURE__ */ jsx("div", { className: "p-4 border rounded", children: /* @__PURE__ */ jsxs(fetcher.Form, { method: "post", className: "flex flex-col gap-2", children: [
-      /* @__PURE__ */ jsx(
-        "input",
-        {
-          name: "id",
-          defaultValue: d.dp_id,
-          className: "p-2 border",
-          required: true
-        }
-      ),
-      /* @__PURE__ */ jsx(
-        "input",
-        {
-          name: "amount",
-          type: "number",
-          step: "0.01",
-          defaultValue: d.amount,
-          className: "p-2 border",
-          required: true
-        }
-      ),
-      /* @__PURE__ */ jsx(
-        "input",
-        {
-          name: "date",
-          type: "date",
-          defaultValue: d.deposit_date ? d.deposit_date.split("T")[0] || d.deposit_date.split(" ")[0] : "",
-          className: "p-2 border",
-          required: true
-        }
-      ),
+    /* @__PURE__ */ jsx("div", { className: "space-y-4", children: deposits.map((d) => /* @__PURE__ */ jsx("div", { className: "p-4 border rounded", children: /* @__PURE__ */ jsxs(fetcher.Form, { method: "post", className: "grid grid-cols-2 gap-2", children: [
+      /* @__PURE__ */ jsx("input", { name: "id", defaultValue: d.dp_id, className: "p-2 border", required: true }),
+      /* @__PURE__ */ jsx("input", { name: "amount", type: "number", step: "0.01", defaultValue: d.amount, className: "p-2 border", required: true }),
+      /* @__PURE__ */ jsx("input", { name: "date", type: "date", defaultValue: d.deposit_date ? format(new Date(d.deposit_date), "yyyy-MM-dd") : "", className: "p-2 border", required: true }),
+      /* @__PURE__ */ jsx("input", { name: "owner_name", defaultValue: d.owner_name, className: "p-2 border" }),
+      /* @__PURE__ */ jsx("input", { name: "depositor_name", defaultValue: d.depositor_name, className: "p-2 border" }),
+      /* @__PURE__ */ jsx("input", { name: "reconciliation", defaultValue: d.reconciliation, className: "p-2 border" }),
+      /* @__PURE__ */ jsx("input", { name: "ref_number", defaultValue: d.ref_number, className: "p-2 border" }),
+      /* @__PURE__ */ jsx("input", { name: "deposit_number", defaultValue: d.deposit_number, className: "p-2 border" }),
+      /* @__PURE__ */ jsx("input", { name: "bank_name", defaultValue: d.bank_name, className: "p-2 border" }),
+      /* @__PURE__ */ jsx("input", { name: "account_type", defaultValue: d.account_type, className: "p-2 border" }),
+      /* @__PURE__ */ jsx("textarea", { name: "comment", defaultValue: d.comment, className: "col-span-2 p-2 border" }),
       /* @__PURE__ */ jsx("input", { type: "hidden", name: "old_id", value: d.dp_id }),
-      /* @__PURE__ */ jsxs("div", { className: "flex gap-2", children: [
-        /* @__PURE__ */ jsx(
-          "button",
-          {
-            type: "submit",
-            name: "intent",
-            value: "update",
-            className: "bg-green-500 text-white p-2 rounded flex-1",
-            children: "Update"
-          }
-        ),
-        /* @__PURE__ */ jsx(
-          "button",
-          {
-            type: "submit",
-            name: "intent",
-            value: "delete",
-            className: "bg-red-500 text-white p-2 rounded flex-1",
-            children: "Delete"
-          }
-        )
+      /* @__PURE__ */ jsxs("div", { className: "col-span-2 flex gap-2", children: [
+        /* @__PURE__ */ jsx("button", { type: "submit", name: "intent", value: "update", className: "bg-green-500 text-white p-2 rounded flex-1", children: "Update" }),
+        /* @__PURE__ */ jsx("button", { type: "submit", name: "intent", value: "delete", className: "bg-red-500 text-white p-2 rounded flex-1", children: "Delete" })
       ] })
     ] }) }, d.dp_id)) })
   ] });
@@ -316,7 +274,7 @@ const route1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProper
   loader,
   meta
 }, Symbol.toStringTag, { value: "Module" }));
-const serverManifest = { "entry": { "module": "/assets/entry.client-CtHEAkve.js", "imports": ["/assets/components-DuEQsw7T.js"], "css": [] }, "routes": { "root": { "id": "root", "parentId": void 0, "path": "", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/root-DoNHjzvZ.js", "imports": ["/assets/components-DuEQsw7T.js"], "css": ["/assets/root-Cofw7XHV.css"] }, "routes/_index": { "id": "routes/_index", "parentId": "root", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/_index-B8LiUUb9.js", "imports": ["/assets/components-DuEQsw7T.js"], "css": [] } }, "url": "/assets/manifest-d9e19647.js", "version": "d9e19647" };
+const serverManifest = { "entry": { "module": "/assets/entry.client-CtHEAkve.js", "imports": ["/assets/components-DuEQsw7T.js"], "css": [] }, "routes": { "root": { "id": "root", "parentId": void 0, "path": "", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/root-DP8RVitz.js", "imports": ["/assets/components-DuEQsw7T.js"], "css": ["/assets/root-UdGhxK-C.css"] }, "routes/_index": { "id": "routes/_index", "parentId": "root", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/_index-DQecdkwl.js", "imports": ["/assets/components-DuEQsw7T.js"], "css": [] } }, "url": "/assets/manifest-903e9e1a.js", "version": "903e9e1a" };
 const mode = "production";
 const assetsBuildDirectory = "build\\client";
 const basename = "/";
